@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Guard Gap Analysis Dashboard</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2c3e50; text-align: center; }
+        h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin: 20px 0;
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: center; 
+        }
+        th { 
+            background: linear-gradient(135deg, #3498db, #2980b9); 
+            color: white; 
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .healthy { background-color: #d4edda; color: #155724; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .critical { background-color: #f8d7da; color: #721c24; }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .details { display: none; }
+        .toggle-btn { cursor: pointer; color: #3498db; text-decoration: underline; }
+        .filter-box { margin: 10px 0; }
+        .filter-box select { padding: 5px; }
+    </style>
+    <script>
+        function toggleDetails(id) {
+            var details = document.getElementById(id);
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }
+        function filterTable() {
+            var status = document.getElementById('statusFilter').value;
+            var rows = document.querySelectorAll('#summaryTable tr.data-row');
+            rows.forEach(row => {
+                var statusCell = row.cells[8].className;
+                row.style.display = (status === 'all' || status === statusCell) ? '' : 'none';
+            });
+        }
+        function sortTable(columnIndex) {
+            var table = document.getElementById('summaryTable');
+            var rows = Array.from(table.querySelectorAll('tr.data-row'));
+            var isAscending = table.dataset.sortDirection !== 'asc';
+            rows.sort((a, b) => {
+                var aValue = a.cells[columnIndex].textContent;
+                var bValue = b.cells[columnIndex].textContent;
+                if (columnIndex >= 3 && columnIndex <= 7) {
+                    aValue = parseInt(aValue) || 0;
+                    bValue = parseInt(bValue) || 0;
+                } else if (columnIndex === 7) {
+                    aValue = parseInt(aValue.replace('minutes', '')) || 0;
+                    bValue = parseInt(bValue.replace('minutes', '')) || 0;
+                }
+                return isAscending ? aValue - bValue : bValue - aValue;
+            });
+            table.querySelector('tbody').innerHTML = '';
+            rows.forEach(row => table.querySelector('tbody').appendChild(row));
+            table.dataset.sortDirection = isAscending ? 'asc' : 'desc';
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Data Guard Gap Analysis Dashboard</h1>
+        <div class="info-box">
+            <strong>Generated:</strong> Sun Aug 30 07:01:08 IST 2026<br>
+            <strong>Host:</strong> orarestoredb<br>
+            <strong>Processed Instances:</strong> 14<br>
+            <strong>Failed Instances:</strong> 0
+        </div>
+        <div class="filter-box">
+            <label for="statusFilter">Filter by Status: </label>
+            <select id="statusFilter" onchange="filterTable()">
+                <option value="all">All</option>
+                <option value="critical">Critical</option>
+                <option value="warning">Warning</option>
+                <option value="healthy">Healthy</option>
+            </select>
+        </div>
+
+        <h2>📋 Instance Summary</h2>
+        <table id="summaryTable" data-sort-direction="desc">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">Instance</th>
+                    <th onclick="sortTable(1)">Primary Archived</th>
+                    <th onclick="sortTable(2)">Standby OS Copied</th>
+                    <th onclick="sortTable(3)">Standby Applied</th>
+                    <th onclick="sortTable(4)">Total Gap</th>
+                    <th onclick="sortTable(5)">Transport Gap</th>
+                    <th onclick="sortTable(6)">Apply Gap</th>
+                    <th onclick="sortTable(7)">Apply Lag</th>
+                    <th onclick="sortTable(8)">Overall Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-VIKRAM')">VIKRAM → DRVIKRAM</span></td>
+                    <td>176262</td>
+                    <td>176261</td>
+                    <td>176261</td>
+                    <td>1</td>
+                    <td>1</td>
+                    <td>0</td>
+                    <td>209minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-VIKRAM">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> VIKRAM | <strong>Standby:</strong> DRVIKRAM<br>
+                            <strong>Standby Host:</strong> 192.168.222.18 | <strong>Archive Directory:</strong> /oracleapp/VIKRAM/archive<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,176263<br>
+ARCHIVED:1,176262<br>
+LOG_HISTORY:1,176262<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_backup/VIKRAM/archive/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">1</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">1</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">209minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>176263</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>176262</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="warning">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>176261</td>
+                                <td>1</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>176261</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>176261</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>1</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>1</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 176262, OS: 176261, DB Received: 176261):<br>
+                            • <strong>Transport issue:</strong> Archive logs not reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_176261_1109679468.dbf (6573088768 bytes, Aug 30 03:31)<br>
+Seq 1: 1_176260_1109679468.dbf (6707011584 bytes, Aug 30 03:23)<br>
+Seq 1: 1_176259_1109679468.dbf (6540283904 bytes, Aug 30 03:07)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-VITHAL')">VITHAL → DRVITHAL</span></td>
+                    <td>29180</td>
+                    <td>29180</td>
+                    <td>29180</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>120minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-VITHAL">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> VITHAL | <strong>Standby:</strong> DRVITHAL<br>
+                            <strong>Standby Host:</strong> 192.168.222.11 | <strong>Archive Directory:</strong> /oracleapp/vithal/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,29182<br>
+ARCHIVED:1,29180<br>
+LOG_HISTORY:1,29181<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/RMAN_BACKUP/vithal/arch_log<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">120minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>29182</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>29180</td>
+                                <td>2</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>29180</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>29180</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>29180</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 29180, OS: 29180, DB Received: 29180):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 29180: vithal_29180_1_1156379094.arc (3806033920 bytes, Aug 30 05:00)<br>
+Seq 29179: vithal_29179_1_1156379094.arc (3546929664 bytes, Aug 30 04:00)<br>
+Seq 29178: vithal_29178_1_1156379094.arc (3681747968 bytes, Aug 30 02:00)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-VISHNU')">VISHNU → DRVISHNU</span></td>
+                    <td>36983</td>
+                    <td>36983</td>
+                    <td>36983</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>355minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-VISHNU">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> VISHNU | <strong>Standby:</strong> DRVISHNU<br>
+                            <strong>Standby Host:</strong> 192.168.222.29 | <strong>Archive Directory:</strong> /rman_bkp/VISHNU/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,36984<br>
+ARCHIVED:1,36983<br>
+LOG_HISTORY:1,36983<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/media/rman_backup/arch_log/oracle/vishnu<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">355minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>36984</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>36983</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>36983</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>36983</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>36983</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 36983, OS: 36983, DB Received: 36983):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_36983_1206917959.dbf (461361664 bytes, Aug 30 01:05)<br>
+Seq 1: 1_36982_1206917959.dbf (4372480 bytes, Aug 29 23:45)<br>
+Seq 1: 1_36981_1206917959.dbf (2023424 bytes, Aug 29 23:45)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-TIRUPATI')">TIRUPATI → DRTIRUPATI</span></td>
+                    <td>28393</td>
+                    <td>28393</td>
+                    <td>28393</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>388minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-TIRUPATI">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> TIRUPATI | <strong>Standby:</strong> DRTIRUPATI<br>
+                            <strong>Standby Host:</strong> 192.168.222.12 | <strong>Archive Directory:</strong> /rman_backup/tirupati/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,28394<br>
+ARCHIVED:1,28393<br>
+LOG_HISTORY:1,28393<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/TIRUPATI/arch_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">388minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>28394</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>28393</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>28393</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>28393</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>28393</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 28393, OS: 28393, DB Received: 28393):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_28393_1195142669.dbf (319303680 bytes, Aug 30 00:32)<br>
+Seq 1: 1_28392_1195142669.dbf (973824 bytes, Aug 29 23:55)<br>
+Seq 1: 1_28390_1195142669.dbf (1762521600 bytes, Aug 29 23:55)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-SHIVAY')">SHIVAY → DRSHIVAY</span></td>
+                    <td>210264</td>
+                    <td>210264</td>
+                    <td>210264</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>321minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-SHIVAY">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> SHIVAY | <strong>Standby:</strong> DRSHIVAY<br>
+                            <strong>Standby Host:</strong> 192.168.222.41 | <strong>Archive Directory:</strong> /media/arch_rmanbkp/archive_log/drshivay<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,210265<br>
+ARCHIVED:1,210264<br>
+LOG_HISTORY:1,210264<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/media/rman_backup_db2/shivay/arch_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">321minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>210265</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>210264</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>210264</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>210264</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>210264</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 210264, OS: 210264, DB Received: 210264):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: shivay_1_210264_1059157415.arc (531003392 bytes, Aug 30 01:39)<br>
+Seq 1: shivay_1_210263_1059157415.arc (469504 bytes, Aug 29 22:30)<br>
+Seq 1: shivay_1_210261_1059157415.arc (4405357568 bytes, Aug 29 22:30)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-PASHUPTI')">PASHUPTI → DRPASHUPTI</span></td>
+                    <td>1194</td>
+                    <td>1194</td>
+                    <td>1194</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>58minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-PASHUPTI">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> PASHUPTI | <strong>Standby:</strong> DRPASHUPTI<br>
+                            <strong>Standby Host:</strong> 192.168.222.63 | <strong>Archive Directory:</strong> /rman_bkp/pashupti/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,1195<br>
+ARCHIVED:1,1194<br>
+LOG_HISTORY:1,1194<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/pashupti/arch_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">58minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>1195</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>1194</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>1194</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>1194</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>1194</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 1194, OS: 1194, DB Received: 1194):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_1194_1237566400.dbf (5291345408 bytes, Aug 30 06:02)<br>
+Seq 1: 1_1193_1237566400.dbf (5328287744 bytes, Aug 29 23:51)<br>
+Seq 1: 1_1192_1237566400.dbf (29057536 bytes, Aug 29 23:27)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-NATRAJ')">NATRAJ → DRNATRAJ</span></td>
+                    <td>12595</td>
+                    <td>12595</td>
+                    <td>12595</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>452minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-NATRAJ">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> NATRAJ | <strong>Standby:</strong> DRNATRAJ<br>
+                            <strong>Standby Host:</strong> 192.168.222.26 | <strong>Archive Directory:</strong> /rman_bkp/natraj/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,12596<br>
+ARCHIVED:1,12595<br>
+LOG_HISTORY:1,12595<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/natraj/arch_log<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">452minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>12596</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>12595</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>12595</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>12595</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>12595</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 12595, OS: 12595, DB Received: 12595):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_12595_1223054194.dbf (290263040 bytes, Aug 29 23:28)<br>
+Seq 1: 1_12594_1223054194.dbf (133120 bytes, Aug 29 23:10)<br>
+Seq 1: 1_12592_1223054194.dbf (1328577536 bytes, Aug 29 23:10)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-MERCURY')">MERCURY → DRMERCURY</span></td>
+                    <td>88484</td>
+                    <td>88484</td>
+                    <td>88484</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>401minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-MERCURY">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> MERCURY | <strong>Standby:</strong> DRMERCURY<br>
+                            <strong>Standby Host:</strong> 192.168.222.23 | <strong>Archive Directory:</strong> /rman_bkp/mercury/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,88485<br>
+ARCHIVED:1,88484<br>
+LOG_HISTORY:1,88484<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/arch_log/mercury/archive_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">401minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>88485</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>88484</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>88484</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>88484</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>88484</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 88484, OS: 88484, DB Received: 88484):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: mercury1_88484_1148496050.arc (2751478784 bytes, Aug 30 00:19)<br>
+Seq 1: mercury1_88481_1148496050.arc (2749921280 bytes, Aug 29 23:35)<br>
+Seq 1: mercury1_88483_1148496050.arc (38912 bytes, Aug 29 23:35)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-MARCOS')">MARCOS → DRMARCOS</span></td>
+                    <td>78193</td>
+                    <td>78193</td>
+                    <td>78193</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>338minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-MARCOS">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> MARCOS | <strong>Standby:</strong> DRMARCOS<br>
+                            <strong>Standby Host:</strong> 192.168.222.25 | <strong>Archive Directory:</strong> /rman_bkp/marcos/archive_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,78194<br>
+ARCHIVED:1,78193<br>
+LOG_HISTORY:1,78193<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_backup/arc_marcos/archive/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">338minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>78194</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>78193</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>78193</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>78193</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>78193</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 78193, OS: 78193, DB Received: 78193):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: arc_marcos_1_78193_1105113436.arc (350210560 bytes, Aug 30 01:22)<br>
+Seq 1: arc_marcos_1_78192_1105113436.arc (2328576 bytes, Aug 29 23:30)<br>
+Seq 1: arc_marcos_1_78190_1105113436.arc (2305872896 bytes, Aug 29 23:30)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-KUBER')">KUBER → DRKUBER</span></td>
+                    <td>46116</td>
+                    <td>46116</td>
+                    <td>46116</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>387minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-KUBER">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> KUBER | <strong>Standby:</strong> DRKUBER<br>
+                            <strong>Standby Host:</strong> 192.168.222.28 | <strong>Archive Directory:</strong> /rman_bkp/kuber/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,46117<br>
+ARCHIVED:1,46116<br>
+LOG_HISTORY:1,46116<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/arch_log/kuber/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">387minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>46117</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>46116</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>46116</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>46116</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>46116</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 46116, OS: 46116, DB Received: 46116):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: arc_kuber_1_46116_1189441932.arc (621546496 bytes, Aug 30 00:33)<br>
+Seq 1: arc_kuber_1_46115_1189441932.arc (13704704 bytes, Aug 30 00:00)<br>
+Seq 1: arc_kuber_1_46114_1189441932.arc (13410304 bytes, Aug 30 00:00)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-KRISHNA')">KRISHNA → DRKRISHNA</span></td>
+                    <td>40507</td>
+                    <td>40507</td>
+                    <td>40507</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>394minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-KRISHNA">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> KRISHNA | <strong>Standby:</strong> DRKRISHNA<br>
+                            <strong>Standby Host:</strong> 192.168.222.22 | <strong>Archive Directory:</strong> /rmab_bkp/krishna/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,40508<br>
+ARCHIVED:1,40507<br>
+LOG_HISTORY:1,40507<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/krishna/arch_log<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">394minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>40508</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>40507</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>40507</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>40507</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>40507</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 40507, OS: 40507, DB Received: 40507):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: krishnay1_40507_1166804902.arc (742478336 bytes, Aug 30 00:26)<br>
+Seq 1: krishnay1_40506_1166804902.arc (10036736 bytes, Aug 29 23:55)<br>
+Seq 1: krishnay1_40504_1166804902.arc (4804992512 bytes, Aug 29 23:55)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-INDRA')">INDRA → DRINDRA</span></td>
+                    <td>2661</td>
+                    <td>2661</td>
+                    <td>2661</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>542minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-INDRA">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> INDRA | <strong>Standby:</strong> DRINDRA<br>
+                            <strong>Standby Host:</strong> 192.168.222.48 | <strong>Archive Directory:</strong> /rman_bkp/indra/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,2662<br>
+ARCHIVED:1,2661<br>
+LOG_HISTORY:1,2661<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/indra/arch_log<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">542minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>2662</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>2661</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>2661</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>2661</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>2661</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 2661, OS: 2661, DB Received: 2661):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_2661_1236343484.dbf (35810816 bytes, Aug 29 21:58)<br>
+Seq 1: 1_2660_1236343484.dbf (70144 bytes, Aug 29 21:30)<br>
+Seq 1: 1_2658_1236343484.dbf (137218560 bytes, Aug 29 21:30)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-EAGLE')">EAGLE → DREAGLE</span></td>
+                    <td>100233</td>
+                    <td>100233</td>
+                    <td>100233</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>360minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-EAGLE">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> EAGLE | <strong>Standby:</strong> DREAGLE<br>
+                            <strong>Standby Host:</strong> 192.168.222.43 | <strong>Archive Directory:</strong> /oracleapp/eagle_arc/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,100234<br>
+ARCHIVED:1,100233<br>
+LOG_HISTORY:1,100233<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/media/rman_backup_db2/eagle/arch_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">360minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>100234</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>100233</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>100233</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>100233</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>100233</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 100233, OS: 100233, DB Received: 100233):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: eagle_1_100233_1059170861.arc (1662315008 bytes, Aug 30 01:00)<br>
+Seq 1: eagle_1_100232_1059170861.arc (2560 bytes, Aug 29 23:40)<br>
+Seq 1: eagle_1_100230_1059170861.arc (1722341888 bytes, Aug 29 23:40)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-ARYABHAT')">ARYABHAT → DRARYABHAT</span></td>
+                    <td>101175</td>
+                    <td>101175</td>
+                    <td>101175</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>288minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-ARYABHAT">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> ARYABHAT | <strong>Standby:</strong> DRARYABHAT<br>
+                            <strong>Standby Host:</strong> 192.168.222.24 | <strong>Archive Directory:</strong> /rman-bkp/ARYABHAT/archvie_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,101176<br>
+ARCHIVED:1,101175<br>
+LOG_HISTORY:1,101175<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/media/rman_backup_db1/aryabhat/archvie_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">288minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>101176</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>101175</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>101175</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>101175</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>101175</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 101175, OS: 101175, DB Received: 101175):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: aryabhat_1_101175_1115246943.arc (2723876864 bytes, Aug 30 02:12)<br>
+Seq 1: aryabhat_1_101174_1115246943.arc (2755821568 bytes, Aug 30 01:04)<br>
+Seq 1: aryabhat_1_101173_1115246943.arc (2804224000 bytes, Aug 30 01:03)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="info-box">
+            <strong>Status Legend:</strong><br>
+            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+            • <strong>Critical:</strong> Gap > 5 sequences<br>
+            • <strong>PENDING:</strong> Files available but not processed<br>
+            • <strong>ISSUE:</strong> Significant delay in processing
+        </div>
+        <div class="info-box">
+            <strong>Summary:</strong><br>
+            Processed Instances: 14<br>
+            Failed Instances: 0<br>
+            <strong>📊 Analysis complete!</strong>
+        </div>
+    </div>
+</body>
+</html>
