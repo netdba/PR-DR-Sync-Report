@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Guard Gap Analysis Dashboard</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2c3e50; text-align: center; }
+        h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin: 20px 0;
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: center; 
+        }
+        th { 
+            background: linear-gradient(135deg, #3498db, #2980b9); 
+            color: white; 
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .healthy { background-color: #d4edda; color: #155724; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .critical { background-color: #f8d7da; color: #721c24; }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .details { display: none; }
+        .toggle-btn { cursor: pointer; color: #3498db; text-decoration: underline; }
+        .filter-box { margin: 10px 0; }
+        .filter-box select { padding: 5px; }
+    </style>
+    <script>
+        function toggleDetails(id) {
+            var details = document.getElementById(id);
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }
+        function filterTable() {
+            var status = document.getElementById('statusFilter').value;
+            var rows = document.querySelectorAll('#summaryTable tr.data-row');
+            rows.forEach(row => {
+                var statusCell = row.cells[8].className;
+                row.style.display = (status === 'all' || status === statusCell) ? '' : 'none';
+            });
+        }
+        function sortTable(columnIndex) {
+            var table = document.getElementById('summaryTable');
+            var rows = Array.from(table.querySelectorAll('tr.data-row'));
+            var isAscending = table.dataset.sortDirection !== 'asc';
+            rows.sort((a, b) => {
+                var aValue = a.cells[columnIndex].textContent;
+                var bValue = b.cells[columnIndex].textContent;
+                if (columnIndex >= 3 && columnIndex <= 7) {
+                    aValue = parseInt(aValue) || 0;
+                    bValue = parseInt(bValue) || 0;
+                } else if (columnIndex === 7) {
+                    aValue = parseInt(aValue.replace('minutes', '')) || 0;
+                    bValue = parseInt(bValue.replace('minutes', '')) || 0;
+                }
+                return isAscending ? aValue - bValue : bValue - aValue;
+            });
+            table.querySelector('tbody').innerHTML = '';
+            rows.forEach(row => table.querySelector('tbody').appendChild(row));
+            table.dataset.sortDirection = isAscending ? 'asc' : 'desc';
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Data Guard Gap Analysis Dashboard</h1>
+        <div class="info-box">
+            <strong>Generated:</strong> Tue Sep 22 07:01:07 IST 2026<br>
+            <strong>Host:</strong> orarestoredb<br>
+            <strong>Processed Instances:</strong> 14<br>
+            <strong>Failed Instances:</strong> 0
+        </div>
+        <div class="filter-box">
+            <label for="statusFilter">Filter by Status: </label>
+            <select id="statusFilter" onchange="filterTable()">
+                <option value="all">All</option>
+                <option value="critical">Critical</option>
+                <option value="warning">Warning</option>
+                <option value="healthy">Healthy</option>
+            </select>
+        </div>
+
+        <h2>📋 Instance Summary</h2>
+        <table id="summaryTable" data-sort-direction="desc">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">Instance</th>
+                    <th onclick="sortTable(1)">Primary Archived</th>
+                    <th onclick="sortTable(2)">Standby OS Copied</th>
+                    <th onclick="sortTable(3)">Standby Applied</th>
+                    <th onclick="sortTable(4)">Total Gap</th>
+                    <th onclick="sortTable(5)">Transport Gap</th>
+                    <th onclick="sortTable(6)">Apply Gap</th>
+                    <th onclick="sortTable(7)">Apply Lag</th>
+                    <th onclick="sortTable(8)">Overall Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="data-row critical">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-KRISHNA')">KRISHNA → DRKRISHNA</span></td>
+                    <td>41168</td>
+                    <td>41168</td>
+                    <td>40882</td>
+                    <td>286</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>16945minutes</td>
+                    <td class="critical">CRITICAL</td>
+                </tr>
+                <tr class="details" id="details-KRISHNA">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> KRISHNA | <strong>Standby:</strong> DRKRISHNA<br>
+                            <strong>Standby Host:</strong> 192.168.222.22 | <strong>Archive Directory:</strong> /rmab_bkp/krishna/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,41169<br>
+ARCHIVED:1,41168<br>
+LOG_HISTORY:1,41168<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/krishna/arch_log<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">286</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">16945minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>41169</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>41168</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>41168</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="warning">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>40882</td>
+                                <td>286</td>
+                                <td>ISSUE</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>40882</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="warning">
+                                <td>Registration Gap</td>
+                                <td>286</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>ISSUE</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="critical">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>286</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>CRITICAL</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 41168, OS: 41168, DB Received: 40882):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration issue:</strong> Logs 40883-41168 are on disk but not registered in standby database<br><strong>Manual action required:</strong><br>1. Verify MRP process on standby: <code>SELECT PROCESS, STATUS FROM V$MANAGED_STANDBY;</code><br>2. Register missing logs manually on DRKRISHNA:<br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40883_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40884_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40885_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40886_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40887_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40888_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40889_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40890_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40891_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40892_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40893_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40894_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40895_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40896_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40897_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40898_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40899_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40900_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40901_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40902_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40903_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40904_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40905_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40906_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40907_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40908_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40909_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40910_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40911_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40912_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40913_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40914_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40915_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40916_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40917_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40918_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40919_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40920_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40921_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40922_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40923_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40924_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40925_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40926_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40927_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40928_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40929_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40930_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40931_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40932_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40933_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40934_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40935_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40936_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40937_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40938_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40939_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40940_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40941_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40942_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40943_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40944_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40945_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40946_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40947_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40948_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40949_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40950_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40951_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40952_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40953_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40954_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40955_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40956_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40957_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40958_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40959_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40960_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40961_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40962_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40963_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40964_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40965_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40966_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40967_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40968_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40969_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40970_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40971_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40972_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40973_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40974_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40975_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40976_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40977_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40978_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40979_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40980_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40981_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40982_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40983_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40984_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40985_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40986_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40987_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40988_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40989_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40990_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40991_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40992_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40993_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40994_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40995_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40996_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40997_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40998_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_40999_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41000_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41001_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41002_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41003_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41004_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41005_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41006_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41007_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41008_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41009_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41010_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41011_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41012_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41013_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41014_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41015_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41016_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41017_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41018_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41019_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41020_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41021_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41022_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41023_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41024_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41025_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41026_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41027_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41028_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41029_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41030_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41031_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41032_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41033_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41034_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41035_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41036_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41037_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41038_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41039_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41040_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41041_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41042_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41043_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41044_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41045_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41046_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41047_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41048_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41049_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41050_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41051_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41052_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41053_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41054_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41055_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41056_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41057_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41058_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41059_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41060_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41061_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41062_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41063_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41064_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41065_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41066_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41067_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41068_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41069_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41070_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41071_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41072_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41073_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41074_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41075_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41076_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41077_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41078_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41079_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41080_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41081_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41082_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41083_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41084_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41085_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41086_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41087_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41088_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41089_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41090_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41091_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41092_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41093_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41094_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41095_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41096_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41097_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41098_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41099_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41100_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41101_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41102_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41103_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41104_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41105_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41106_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41107_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41108_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41109_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41110_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41111_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41112_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41113_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41114_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41115_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41116_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41117_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41118_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41119_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41120_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41121_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41122_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41123_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41124_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41125_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41126_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41127_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41128_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41129_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41130_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41131_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41132_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41133_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41134_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41135_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41136_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41137_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41138_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41139_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41140_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41141_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41142_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41143_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41144_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41145_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41146_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41147_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41148_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41149_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41150_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41151_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41152_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41153_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41154_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41155_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41156_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41157_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41158_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41159_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41160_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41161_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41162_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41163_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41164_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41165_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41166_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41167_*.{dbf,arc}';</code><br>   <code>sqlplus -S SYS/Krishnacbs786@DRKRISHNA as sysdba @register_log.sql</code><br>   Where register_log.sql contains: <code>ALTER DATABASE REGISTER LOGFILE '/rmab_bkp/krishna/arch_log/*_41168_*.{dbf,arc}';</code><br>3. Check standby alert log for registration errors: <code>tail -n 100 /rmab_bkp/krishna/arch_log/alert*.log</code><br>4. Verify file permissions and paths in /rmab_bkp/krishna/arch_log on 192.168.222.22<br>
+                            • <strong>Manual action required:</strong> Check MRP process and register missing logs<br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: krishnay1_41168_1166804902.arc (6166206464 bytes, Sep 22 00:17)<br>
+Seq 1: krishnay1_41167_1166804902.arc (21496832 bytes, Sep 21 22:45)<br>
+Seq 1: krishnay1_41165_1166804902.arc (5171960320 bytes, Sep 21 22:45)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-VITHAL')">VITHAL → DRVITHAL</span></td>
+                    <td>29925</td>
+                    <td>29925</td>
+                    <td>29925</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>74minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-VITHAL">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> VITHAL | <strong>Standby:</strong> DRVITHAL<br>
+                            <strong>Standby Host:</strong> 192.168.222.11 | <strong>Archive Directory:</strong> /oracleapp/vithal/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,29927<br>
+ARCHIVED:1,29925<br>
+LOG_HISTORY:1,29926<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/RMAN_BACKUP/vithal/arch_log<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">74minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>29927</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>29925</td>
+                                <td>2</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>29925</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>29925</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>29925</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 29925, OS: 29925, DB Received: 29925):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 29925: vithal_29925_1_1156379094.arc (3415185408 bytes, Sep 22 05:45)<br>
+Seq 29924: vithal_29924_1_1156379094.arc (3920284160 bytes, Sep 22 04:00)<br>
+Seq 29923: vithal_29923_1_1156379094.arc (3911789056 bytes, Sep 22 02:00)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-VISHNU')">VISHNU → DRVISHNU</span></td>
+                    <td>37171</td>
+                    <td>37171</td>
+                    <td>37171</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>361minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-VISHNU">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> VISHNU | <strong>Standby:</strong> DRVISHNU<br>
+                            <strong>Standby Host:</strong> 192.168.222.29 | <strong>Archive Directory:</strong> /rman_bkp/VISHNU/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,37172<br>
+ARCHIVED:1,37171<br>
+LOG_HISTORY:1,37171<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/media/rman_backup/arch_log/oracle/vishnu<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">361minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>37172</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>37171</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>37171</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>37171</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>37171</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 37171, OS: 37171, DB Received: 37171):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_37171_1206917959.dbf (50241536 bytes, Sep 22 00:59)<br>
+Seq 1: 1_37170_1206917959.dbf (42496 bytes, Sep 21 23:45)<br>
+Seq 1: 1_37169_1206917959.dbf (1024 bytes, Sep 21 23:45)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-VIKRAM')">VIKRAM → DRVIKRAM</span></td>
+                    <td>177984</td>
+                    <td>177984</td>
+                    <td>177984</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>258minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-VIKRAM">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> VIKRAM | <strong>Standby:</strong> DRVIKRAM<br>
+                            <strong>Standby Host:</strong> 192.168.222.18 | <strong>Archive Directory:</strong> /oracleapp/VIKRAM/archive<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,177985<br>
+ARCHIVED:1,177984<br>
+LOG_HISTORY:1,177984<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_backup/VIKRAM/archive/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">258minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>177985</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>177984</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>177984</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>177984</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>177984</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 177984, OS: 177984, DB Received: 177984):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_177984_1109679468.dbf (6572077056 bytes, Sep 22 02:42)<br>
+Seq 1: 1_177983_1109679468.dbf (6459944960 bytes, Sep 22 02:28)<br>
+Seq 1: 1_177982_1109679468.dbf (6526238720 bytes, Sep 22 02:13)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-TIRUPATI')">TIRUPATI → DRTIRUPATI</span></td>
+                    <td>29756</td>
+                    <td>29756</td>
+                    <td>29756</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>175minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-TIRUPATI">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> TIRUPATI | <strong>Standby:</strong> DRTIRUPATI<br>
+                            <strong>Standby Host:</strong> 192.168.222.12 | <strong>Archive Directory:</strong> /rman_backup/tirupati/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,29757<br>
+ARCHIVED:1,29756<br>
+LOG_HISTORY:1,29756<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/TIRUPATI/arch_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">175minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>29757</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>29756</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>29756</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>29756</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>29756</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 29756, OS: 29756, DB Received: 29756):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_29756_1195142669.dbf (4275646976 bytes, Sep 22 04:05)<br>
+Seq 1: 1_29755_1195142669.dbf (4233164288 bytes, Sep 22 01:42)<br>
+Seq 1: 1_29754_1195142669.dbf (4477636096 bytes, Sep 22 00:53)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-SHIVAY')">SHIVAY → DRSHIVAY</span></td>
+                    <td>210611</td>
+                    <td>210611</td>
+                    <td>210611</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>316minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-SHIVAY">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> SHIVAY | <strong>Standby:</strong> DRSHIVAY<br>
+                            <strong>Standby Host:</strong> 192.168.222.41 | <strong>Archive Directory:</strong> /media/arch_rmanbkp/archive_log/drshivay<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,210612<br>
+ARCHIVED:1,210611<br>
+LOG_HISTORY:1,210611<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/media/rman_backup_db2/shivay/arch_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">316minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>210612</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>210611</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>210611</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>210611</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>210611</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 210611, OS: 210611, DB Received: 210611):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: shivay_1_210611_1059157415.arc (220967936 bytes, Sep 22 01:44)<br>
+Seq 1: shivay_1_210610_1059157415.arc (2048 bytes, Sep 21 23:45)<br>
+Seq 1: shivay_1_210608_1059157415.arc (240574976 bytes, Sep 21 23:45)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-PASHUPTI')">PASHUPTI → DRPASHUPTI</span></td>
+                    <td>2349</td>
+                    <td>2349</td>
+                    <td>2349</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>67minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-PASHUPTI">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> PASHUPTI | <strong>Standby:</strong> DRPASHUPTI<br>
+                            <strong>Standby Host:</strong> 192.168.222.63 | <strong>Archive Directory:</strong> /rman_bkp/pashupti/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,2350<br>
+ARCHIVED:1,2349<br>
+LOG_HISTORY:1,2349<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/pashupti/arch_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">67minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>2350</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>2349</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>2349</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>2349</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>2349</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 2349, OS: 2349, DB Received: 2349):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_2349_1237566400.dbf (5289965568 bytes, Sep 22 05:53)<br>
+Seq 1: 1_2348_1237566400.dbf (5358555136 bytes, Sep 21 23:52)<br>
+Seq 1: 1_2347_1237566400.dbf (63597056 bytes, Sep 21 23:33)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-NATRAJ')">NATRAJ → DRNATRAJ</span></td>
+                    <td>13053</td>
+                    <td>13053</td>
+                    <td>13053</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>501minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-NATRAJ">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> NATRAJ | <strong>Standby:</strong> DRNATRAJ<br>
+                            <strong>Standby Host:</strong> 192.168.222.26 | <strong>Archive Directory:</strong> /rman_bkp/natraj/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,13054<br>
+ARCHIVED:1,13053<br>
+LOG_HISTORY:1,13053<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/natraj/arch_log<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">501minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>13054</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>13053</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>13053</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>13053</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>13053</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 13053, OS: 13053, DB Received: 13053):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_13053_1223054194.dbf (801166336 bytes, Sep 21 22:39)<br>
+Seq 1: 1_13052_1223054194.dbf (239616 bytes, Sep 21 21:30)<br>
+Seq 1: 1_13050_1223054194.dbf (1011091968 bytes, Sep 21 21:30)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-MERCURY')">MERCURY → DRMERCURY</span></td>
+                    <td>90579</td>
+                    <td>90579</td>
+                    <td>90579</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>389minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-MERCURY">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> MERCURY | <strong>Standby:</strong> DRMERCURY<br>
+                            <strong>Standby Host:</strong> 192.168.222.23 | <strong>Archive Directory:</strong> /rman_bkp/mercury/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,90580<br>
+ARCHIVED:1,90579<br>
+LOG_HISTORY:1,90579<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/arch_log/mercury/archive_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">389minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>90580</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>90579</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>90579</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>90579</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>90579</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 90579, OS: 90579, DB Received: 90579):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: mercury1_90579_1148496050.arc (2860589568 bytes, Sep 22 00:31)<br>
+Seq 1: mercury1_90578_1148496050.arc (61952 bytes, Sep 21 23:35)<br>
+Seq 1: mercury1_90576_1148496050.arc (2642413056 bytes, Sep 21 23:35)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-MARCOS')">MARCOS → DRMARCOS</span></td>
+                    <td>78565</td>
+                    <td>78565</td>
+                    <td>78565</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>341minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-MARCOS">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> MARCOS | <strong>Standby:</strong> DRMARCOS<br>
+                            <strong>Standby Host:</strong> 192.168.222.25 | <strong>Archive Directory:</strong> /rman_bkp/marcos/archive_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,78566<br>
+ARCHIVED:1,78565<br>
+LOG_HISTORY:1,78565<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_backup/arc_marcos/archive/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">341minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>78566</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>78565</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>78565</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>78565</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>78565</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 78565, OS: 78565, DB Received: 78565):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: arc_marcos_1_78565_1105113436.arc (348564480 bytes, Sep 22 01:18)<br>
+Seq 1: arc_marcos_1_78564_1105113436.arc (2560 bytes, Sep 21 23:30)<br>
+Seq 1: arc_marcos_1_78562_1105113436.arc (1748958208 bytes, Sep 21 23:30)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-KUBER')">KUBER → DRKUBER</span></td>
+                    <td>47591</td>
+                    <td>47591</td>
+                    <td>47591</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>240minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-KUBER">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> KUBER | <strong>Standby:</strong> DRKUBER<br>
+                            <strong>Standby Host:</strong> 192.168.222.28 | <strong>Archive Directory:</strong> /rman_bkp/kuber/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,47592<br>
+ARCHIVED:1,47591<br>
+LOG_HISTORY:1,47591<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/arch_log/kuber/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">240minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>47592</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>47591</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>47591</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>47591</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>47591</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 47591, OS: 47591, DB Received: 47591):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: arc_kuber_1_47591_1189441932.arc (5162192384 bytes, Sep 22 03:00)<br>
+Seq 1: arc_kuber_1_47590_1189441932.arc (274753536 bytes, Sep 22 00:34)<br>
+Seq 1: arc_kuber_1_47589_1189441932.arc (6239744 bytes, Sep 21 23:58)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-INDRA')">INDRA → DRINDRA</span></td>
+                    <td>3867</td>
+                    <td>3867</td>
+                    <td>3867</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>455minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-INDRA">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> INDRA | <strong>Standby:</strong> DRINDRA<br>
+                            <strong>Standby Host:</strong> 192.168.222.48 | <strong>Archive Directory:</strong> /rman_bkp/indra/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,3868<br>
+ARCHIVED:1,3867<br>
+LOG_HISTORY:1,3867<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/rman_bkp/indra/arch_log<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">455minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>3868</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>3867</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>3867</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>3867</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>3867</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 3867, OS: 3867, DB Received: 3867):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: 1_3867_1236343484.dbf (39135232 bytes, Sep 21 23:25)<br>
+Seq 1: 1_3866_1236343484.dbf (209408 bytes, Sep 21 23:10)<br>
+Seq 1: 1_3864_1236343484.dbf (4329422336 bytes, Sep 21 23:10)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-EAGLE')">EAGLE → DREAGLE</span></td>
+                    <td>101138</td>
+                    <td>101138</td>
+                    <td>101138</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>348minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-EAGLE">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> EAGLE | <strong>Standby:</strong> DREAGLE<br>
+                            <strong>Standby Host:</strong> 192.168.222.43 | <strong>Archive Directory:</strong> /oracleapp/eagle_arc/arch_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,101139<br>
+ARCHIVED:1,101138<br>
+LOG_HISTORY:1,101138<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/media/rman_backup_db2/eagle/arch_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">348minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>101139</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>101138</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>101138</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>101138</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>101138</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 101138, OS: 101138, DB Received: 101138):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: eagle_1_101138_1059170861.arc (23423488 bytes, Sep 22 01:11)<br>
+Seq 1: eagle_1_101137_1059170861.arc (1754017280 bytes, Sep 22 01:01)<br>
+Seq 1: eagle_1_101136_1059170861.arc (7680 bytes, Sep 21 23:40)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+                <tr class="data-row healthy">
+                    <td><span class="toggle-btn" onclick="toggleDetails('details-ARYABHAT')">ARYABHAT → DRARYABHAT</span></td>
+                    <td>102842</td>
+                    <td>102842</td>
+                    <td>102842</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>143minutes</td>
+                    <td class="healthy">HEALTHY</td>
+                </tr>
+                <tr class="details" id="details-ARYABHAT">
+                    <td colspan="9">
+                        <div class="info-box">
+                            <strong>Primary:</strong> ARYABHAT | <strong>Standby:</strong> DRARYABHAT<br>
+                            <strong>Standby Host:</strong> 192.168.222.24 | <strong>Archive Directory:</strong> /rman-bkp/ARYABHAT/archvie_log<br>
+                            <strong>Primary SQL Output:</strong><br>CURRENT:1,102843<br>
+ARCHIVED:1,102842<br>
+LOG_HISTORY:1,102842<br>
+STATUS:PRIMARY,MAXIMUM PERFORMANCE<br>
+SELECT 'INCARNATION:' || resetlogs_change# || ',' || current_scn FROM v$database_incarnation WHERE status = 'CURRENT'<br>
+                                                        *<br>
+ERROR at line 1:<br>
+ORA-00904: "CURRENT_SCN": invalid identifier<br>
+<br>
+<br>
+ARCH_DEST:1,PRIMARY,VALID,/media/rman_backup_db1/aryabhat/archvie_log/<br>
+                        </div>
+
+                        <h2>📈 Key Metrics</h2>
+                        <div style="text-align: center;">
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Total Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Transport Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Apply Gap</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">143minutes</div>
+                                <div class="metric-label">Apply Lag</div>
+                            </div>
+                        </div>
+
+                        <h2>🔄 Sequence Flow Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Stage</th>
+                                <th>Location</th>
+                                <th>Sequence</th>
+                                <th>Gap from Previous</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Primary Current</td>
+                                <td>Primary DB</td>
+                                <td>102843</td>
+                                <td>-</td>
+                                <td class="healthy">ACTIVE</td>
+                            </tr>
+                            <tr>
+                                <td>Primary Archived</td>
+                                <td>Primary DB</td>
+                                <td>102842</td>
+                                <td>1</td>
+                                <td class="healthy">OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby OS Copied</td>
+                                <td>Standby OS</td>
+                                <td>102842</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Received</td>
+                                <td>Standby DB</td>
+                                <td>102842</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Standby Applied</td>
+                                <td>Standby DB</td>
+                                <td>102842</td>
+                                <td>0</td>
+                                <td>OK</td>
+                            </tr>
+                        </table>
+
+                        <h2>🔍 Detailed Gap Analysis</h2>
+                        <table>
+                            <tr>
+                                <th>Gap Type</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                                <th>Issue Level</th>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Transport Gap</td>
+                                <td>0</td>
+                                <td>Primary Archived → Standby OS</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Registration Gap</td>
+                                <td>0</td>
+                                <td>Standby OS → Standby DB Catalog</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td>Apply Gap</td>
+                                <td>0</td>
+                                <td>Standby Received → Standby Applied</td>
+                                <td>OK</td>
+                            </tr>
+                            <tr class="healthy">
+                                <td><strong>Total Gap</strong></td>
+                                <td><strong>0</strong></td>
+                                <td><strong>Primary Archived → Standby Applied</strong></td>
+                                <td><strong>HEALTHY</strong></td>
+                            </tr>
+                        </table>
+
+                        <div class="info-box">
+                            <strong>Current Situation Analysis:</strong><br>
+                            Based on your data (Primary: 102842, OS: 102842, DB Received: 102842):<br>
+                            • <strong>Transport is working:</strong> Archive logs are reaching standby OS<br>
+                            • <strong>Registration OK:</strong> All logs on disk are registered in standby database<br>
+                            • <strong>No immediate action needed</strong><br><br>
+                            <strong>Recent Archive Files:</strong><br>
+                            Seq 1: aryabhat_1_102842_1115246943.arc (2723860480 bytes, Sep 22 04:38)<br>
+Seq 1: aryabhat_1_102841_1115246943.arc (2724732928 bytes, Sep 22 03:18)<br>
+Seq 1: aryabhat_1_102840_1115246943.arc (2724343808 bytes, Sep 22 02:40)<br><br><br>
+                            <strong>Status Legend:</strong><br>
+                            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+                            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+                            • <strong>Critical:</strong> Gap > 5 sequences<br>
+                            • <strong>PENDING:</strong> Files available but not processed<br>
+                            • <strong>ISSUE:</strong> Significant delay in processing
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="info-box">
+            <strong>Status Legend:</strong><br>
+            • <strong>Healthy:</strong> Gap = 1 sequence<br>
+            • <strong>Warning:</strong> Gap 2-5 sequences<br>
+            • <strong>Critical:</strong> Gap > 5 sequences<br>
+            • <strong>PENDING:</strong> Files available but not processed<br>
+            • <strong>ISSUE:</strong> Significant delay in processing
+        </div>
+        <div class="info-box">
+            <strong>Summary:</strong><br>
+            Processed Instances: 14<br>
+            Failed Instances: 0<br>
+            <strong>📊 Analysis complete!</strong>
+        </div>
+    </div>
+</body>
+</html>
